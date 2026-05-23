@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>share-insights — publish shareable summaries of AI sessions</title>
+  <style>
+    :root { --bg: #fff; --fg: #1a1a1a; --muted: #6b7280; --rule: #e5e7eb; --code-bg: #f3f4f6; --link: #2563eb; --accent: #f59e0b; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #0b0b0c; --fg: #e5e7eb; --muted: #9ca3af; --rule: #1f2937; --code-bg: #161b22; --link: #60a5fa; --accent: #fbbf24; }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--fg); }
+    body { font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; max-width: 760px; padding: 56px 24px 80px; margin: 0 auto; }
+    h1 { font-size: 36px; margin: 0 0 6px; line-height: 1.1; }
+    .tagline { color: var(--muted); font-size: 16px; margin: 0 0 12px; }
+    .pill { display: inline-block; background: var(--code-bg); color: var(--muted); padding: 2px 10px; border-radius: 999px; font-size: 12px; letter-spacing: 0.04em; margin-bottom: 28px; }
+    h2 { font-size: 22px; margin: 44px 0 8px; padding-top: 20px; border-top: 1px solid var(--rule); }
+    h2 .num { display: inline-block; width: 28px; height: 28px; line-height: 28px; border-radius: 50%; background: var(--accent); color: #fff; text-align: center; font-size: 14px; margin-right: 8px; vertical-align: 2px; }
+    h3 { font-size: 16px; margin: 24px 0 8px; }
+    p { margin: 10px 0; }
+    a { color: var(--link); }
+    a:hover { text-decoration: none; }
+    ul, ol { padding-left: 24px; }
+    li { margin: 6px 0; }
+    code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; background: var(--code-bg); padding: 1.5px 6px; border-radius: 3px; font-size: 13.5px; }
+    pre { background: var(--code-bg); padding: 14px 16px; border-radius: 6px; overflow-x: auto; font-size: 13px; line-height: 1.55; position: relative; }
+    pre code { background: transparent; padding: 0; font-size: inherit; }
+    .copy-btn { position: absolute; top: 8px; right: 8px; padding: 4px 10px; font-size: 11px; border-radius: 4px; border: 1px solid var(--rule); background: var(--bg); color: var(--muted); cursor: pointer; font-family: inherit; }
+    .copy-btn:hover { color: var(--fg); }
+    .copy-btn.copied { color: #16a34a; border-color: #16a34a; }
+    .card { border: 1px solid var(--rule); border-radius: 8px; padding: 20px 22px; margin: 12px 0; }
+    .card.header { display: flex; align-items: center; gap: 12px; }
+    .card.header .logo { font-size: 22px; }
+    .badge { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 11px; letter-spacing: 0.02em; background: rgba(245,158,11,0.15); color: var(--accent); margin-left: 6px; vertical-align: 2px; }
+    .badge.plan { background: rgba(96,165,250,0.15); color: var(--link); }
+    .row { display: grid; gap: 14px; grid-template-columns: repeat(2, 1fr); }
+    @media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
+    .row .card { margin: 0; }
+    .row .card h3 { margin-top: 0; }
+    footer { margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 13px; }
+    .lede { font-size: 17px; line-height: 1.55; }
+    .small { color: var(--muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+  <span class="pill">SHARE-INSIGHTS · v0.1</span>
+  <h1>Turn any AI session into a clean, shareable URL</h1>
+  <p class="lede">Ask your AI to summarize what you just did, and publish the result to a short URL like <code>share-insights.pages.dev/a1b2c3d4e5f6</code>. No accounts. No tracking. Auto-deleted after 90 days. Works for Claude, ChatGPT, Cursor, Codex.</p>
+
+  <h2><span class="num">1</span>Install for your AI tool</h2>
+  <p>Pick the tool you use. All paths end at the same backend; the URL format is identical.</p>
+
+  <div class="card header">
+    <span class="logo">🤖</span>
+    <div>
+      <h3 style="margin:0;">Claude Desktop <span class="badge plan">free, all plans</span></h3>
+      <p class="small" style="margin:2px 0 0;">Works on the Claude desktop app for Mac &amp; Windows.</p>
+    </div>
+  </div>
+  <p>Open (or create) <code>~/Library/Application Support/Claude/claude_desktop_config.json</code> and add a <code>share-insights</code> entry under <code>mcpServers</code>:</p>
+  <pre><button class="copy-btn" data-copy>copy</button><code>{
+  "mcpServers": {
+    "share-insights": {
+      "url": "https://share-insights-mcp.tshradheya.workers.dev/mcp"
+    }
+  }
+}</code></pre>
+  <p>Quit and relaunch Claude Desktop. In any chat say "share this conversation" — Claude will call the <code>prepare_insights</code> tool, show you what's about to publish, ask you to confirm, then call <code>publish_insights</code>.</p>
+
+  <div class="card header">
+    <span class="logo">🌐</span>
+    <div>
+      <h3 style="margin:0;">Claude.ai web <span class="badge plan">Pro / Team / Enterprise</span></h3>
+      <p class="small" style="margin:2px 0 0;">Custom Connectors require a paid plan.</p>
+    </div>
+  </div>
+  <ol>
+    <li>Open <a href="https://claude.ai/settings/connectors">claude.ai/settings/connectors</a></li>
+    <li>Click <strong>Add custom connector</strong></li>
+    <li>Paste this URL:</li>
+  </ol>
+  <pre><button class="copy-btn" data-copy>copy</button><code>https://share-insights-mcp.tshradheya.workers.dev/mcp</code></pre>
+  <p>If you don't see "Add custom connector," your plan or org settings don't have it enabled — use Claude Desktop instead (above).</p>
+
+  <div class="card header">
+    <span class="logo">🖱️</span>
+    <div>
+      <h3 style="margin:0;">Cursor <span class="badge plan">free, all plans</span></h3>
+    </div>
+  </div>
+  <p>Open (or create) <code>~/.cursor/mcp.json</code> and add:</p>
+  <pre><button class="copy-btn" data-copy>copy</button><code>{
+  "mcpServers": {
+    "share-insights": {
+      "url": "https://share-insights-mcp.tshradheya.workers.dev/mcp"
+    }
+  }
+}</code></pre>
+  <p>Restart Cursor. The tools show up in Settings → MCP.</p>
+
+  <div class="card header">
+    <span class="logo">⌨️</span>
+    <div>
+      <h3 style="margin:0;">Claude Code <span class="badge plan">free, one command</span></h3>
+      <p class="small" style="margin:2px 0 0;">Installs both the <code>/share-insights</code> skill and the bundled MCP server.</p>
+    </div>
+  </div>
+  <p>From inside Claude Code, run:</p>
+  <pre><button class="copy-btn" data-copy>copy</button><code>/plugin marketplace add tshradheya/share-insights
+/plugin install share-insights@share-insights</code></pre>
+  <p>Then in any session: <code>/share-insights</code>.</p>
+
+  <div class="card header">
+    <span class="logo">📟</span>
+    <div>
+      <h3 style="margin:0;">Codex CLI / standalone Python <span class="badge plan">all platforms</span></h3>
+    </div>
+  </div>
+  <pre><button class="copy-btn" data-copy>copy</button><code>git clone https://github.com/tshradheya/share-insights
+python3 share-insights/cli/share_insights.py your-file.html --title "..."</code></pre>
+
+  <div class="card header">
+    <span class="logo">💬</span>
+    <div>
+      <h3 style="margin:0;">ChatGPT.com <span class="badge plan">Plus required</span></h3>
+      <p class="small" style="margin:2px 0 0;">Use it inside its own chat, or <code>@share-insights</code> from any conversation.</p>
+    </div>
+  </div>
+  <ol>
+    <li>Open the GPT once so it lands in your sidebar: <a href="https://chatgpt.com/g/g-6a1137bf11748191a837919a8646853a-share-insights">share-insights GPT</a></li>
+    <li>From then on, in <em>any</em> ChatGPT conversation type <code>@share-insights</code> followed by "publish this conversation". ChatGPT will hand off the current context to the GPT, which calls the publish action and returns a URL inline.</li>
+    <li>Or just continue chatting inside the GPT itself — same flow, just less convenient if you started elsewhere.</li>
+  </ol>
+
+  <h2><span class="num">2</span>Don't want to install anything? Use any AI as-is</h2>
+  <p>Works for free ChatGPT, Claude.ai (any plan), Gemini, anything. Three steps:</p>
+  <ol>
+    <li>Paste this prompt at the end of your AI conversation:</li>
+  </ol>
+  <pre><button class="copy-btn" data-copy>copy</button><code>Summarize this conversation into a self-contained HTML document I can publish.
+
+Required structure: sections for TL;DR, Decisions, Findings, Code &amp; diffs, Open Questions, Next Steps. Include only sections that have real content.
+
+REDACT aggressively before writing: replace anything that looks like an API key (AKIA…, ghp_…, sk-…, sk-ant-…, AIza…, xox*-…), JWT (eyJ…eyJ…), password= or Authorization: Bearer values, paths under /Users/me/ or /home/me/, internal hostnames, customer/account names not already public, and personal email addresses. Note every redaction in a "Redactions" section at the bottom.
+
+The HTML must be a complete document. Do NOT include &lt;script&gt;, &lt;iframe&gt;, external CSS/JS, &lt;link&gt;, &lt;form&gt;, or any on* event attributes — the publisher rejects them. Diagrams must be inline SVG. Images must be base64 data: URIs. Use embedded CSS only.
+
+Output ONLY the HTML, starting with &lt;!doctype html&gt; — no commentary before or after.</code></pre>
+  <ol start="2">
+    <li>Copy the entire HTML the AI gives you.</li>
+    <li>Paste into <a href="/new.html"><code>share-insights.pages.dev/new</code></a> (publish form — coming with v0.2) or, for now, run via the API:</li>
+  </ol>
+  <pre><button class="copy-btn" data-copy>copy</button><code>curl -X POST https://share-insights.tshradheya.workers.dev/api/publish \
+  -H 'content-type: application/json' \
+  -H 'user-agent: share-insights-manual/0.1' \
+  --data @- &lt;&lt;EOF
+{"html": $(jq -Rs . &lt; your-file.html), "title": "your title"}
+EOF</code></pre>
+
+  <h2><span class="num">3</span>Ask your AI to install it for you</h2>
+  <p>If you're already in a chat with Claude, ChatGPT, etc., paste this and the AI will walk you through the right install for the tool you're in:</p>
+  <pre><button class="copy-btn" data-copy>copy</button><code>I want to install the share-insights MCP server so I can publish summaries of our conversations to share-insights.pages.dev.
+
+Please:
+1. Detect which AI tool I'm using (you're it).
+2. Tell me the exact file to edit OR setting to change for THIS tool.
+3. Give me the snippet to paste:
+   - MCP URL: https://share-insights-mcp.tshradheya.workers.dev/mcp
+   - The MCP exposes two tools: prepare_insights(html, title?) and publish_insights(preview_token).
+4. Walk me through it step by step. Ask one question at a time.
+5. After install, test it by asking me what we just worked on, summarize it, redact secrets, show me a preview, ask permission, then publish.</code></pre>
+
+  <h2><span class="num">4</span>Privacy &amp; limits</h2>
+  <ul>
+    <li>URLs are unguessable 12-char content hashes. No listing page, not indexed (<code>noindex</code> + <code>robots.txt: Disallow: /</code>).</li>
+    <li>Pages auto-delete <strong>90 days after the last view</strong>.</li>
+    <li>No accounts, no identifiers. Only the rendered HTML + minimal metadata.</li>
+    <li>Anyone with the URL can read the page. No per-page password in v0.1.</li>
+    <li>10 MB max HTML, 20 publishes per IP per day, 5 per hour.</li>
+    <li>Every page has a <em>Report this page</em> footer link reviewed within 24h. <a href="/abuse">Full policy →</a></li>
+  </ul>
+
+  <footer>
+    Source code on <a href="https://github.com/&lt;you&gt;/share-insights">GitHub</a> · <a href="/abuse">Abuse policy</a> · Built on Cloudflare Workers + R2
+  </footer>
+
+  <script>
+    document.querySelectorAll('[data-copy]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const pre = btn.closest('pre');
+        const code = pre.querySelector('code').textContent;
+        try {
+          await navigator.clipboard.writeText(code);
+          btn.textContent = 'copied';
+          btn.classList.add('copied');
+          setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 1500);
+        } catch {
+          btn.textContent = 'copy failed';
+        }
+      });
+    });
+  </script>
+</body>
+</html>

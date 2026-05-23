@@ -1,0 +1,19 @@
+{
+  "$schema": "https://claude.ai/schemas/marketplace.json",
+  "name": "share-insights",
+  "owner": {
+    "name": "Shradheya Thakre",
+    "url": "https://share-insights.pages.dev/"
+  },
+  "metadata": {
+    "description": "Publish redacted, structured HTML summaries of AI coding sessions to a short share-insights.pages.dev URL.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "share-insights",
+      "source": "./plugins/share-insights",
+      "description": "Summarize the current session, redact secrets, get user consent, and publish a shareable HTML page. Bundles an optional MCP server that exposes the same publish flow to any MCP host."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://claude.ai/schemas/plugin.json",
+  "name": "share-insights",
+  "version": "0.1.0",
+  "description": "Summarize the current session, redact secrets, ask for consent, and publish a shareable HTML page at share-insights.pages.dev/<hash>. Auto-deletes after 90 days. Anonymous, unindexed.",
+  "author": {
+    "name": "Shradheya Thakre",
+    "url": "https://share-insights.pages.dev/"
+  },
+  "homepage": "https://share-insights.pages.dev/",
+  "license": "MIT",
+  "keywords": ["share", "publish", "html", "summary", "session", "mcp"]
+}

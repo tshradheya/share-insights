@@ -1,0 +1,41 @@
+name = "share-insights"
+main = "src/index.ts"
+compatibility_date = "2024-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# R2 bucket holding the published HTML, keyed by sha256[:12].html
+[[r2_buckets]]
+binding = "PAGES"
+bucket_name = "share-insights-pages"
+
+# KV namespace: rate-limit counters AND prepare-stage tokens.
+# Keys:
+#   rl:ip:<ip>:day  (expires 86400)
+#   rl:ip:<ip>:hour (expires 3600)
+#   rl:ip:<ip>:burst (expires 60, counts last-minute attempts)
+#   prep:<token>    (expires 300, holds {html, title, source})
+#   admin:read_only (set by spend-cap handler)
+[[kv_namespaces]]
+binding = "STATE"
+id = "682efc43611a40c2a7c130aaa4d289b7"
+
+# Scheduled handler: TTL sweep at 3 AM UTC daily.
+[triggers]
+crons = ["0 3 * * *"]
+
+[vars]
+# Override per-environment. For now we point at the workers.dev subdomain
+# until a custom domain is wired. Update + redeploy when moving to pages.dev
+# or a custom domain.
+PUBLIC_BASE_URL = "https://share-insights.tshradheya.workers.dev"
+TTL_DAYS = "90"
+RATE_LIMIT_DAILY = "20"
+RATE_LIMIT_HOURLY = "5"
+BURST_THRESHOLD = "5"
+MAX_HTML_BYTES = "10485760"   # 10 MiB
+ADMIN_NOTIFY_EMAIL = "abuse@share-insights.pages.dev"
+
+# Secrets (set via `wrangler secret put`):
+#   ADMIN_TOKEN          — bearer token for DELETE /api/admin/page/:hash
+#   TURNSTILE_SECRET     — server-side key from Cloudflare Turnstile
+#   ABUSE_SLACK_WEBHOOK  — Slack incoming-webhook URL for /api/report

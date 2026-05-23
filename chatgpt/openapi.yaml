@@ -1,0 +1,178 @@
+openapi: 3.1.0
+info:
+  title: share-insights
+  description: Publish a redacted, structured HTML summary of an AI session to a shareable URL.
+  version: 0.1.0
+servers:
+  - url: https://share-insights.tshradheya.workers.dev
+    description: Production API (Cloudflare Worker)
+paths:
+  /api/prepare:
+    post:
+      operationId: prepareInsights
+      summary: Dry-run an upload — scan for secrets and disallowed HTML, stage server-side for 5 minutes.
+      description: |
+        Always call this BEFORE publish. Returns a preview_token that publish needs. Surfaces any warnings.
+        The user must explicitly consent before you call publish.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrepareRequest"
+      responses:
+        "200":
+          description: Staged successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrepareResponse"
+        "400":
+          description: Rejected (secrets, disallowed HTML, missing fields).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: HTML too large (10 MB cap).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Service is in read-only mode.
+  /api/publish:
+    post:
+      operationId: publishInsights
+      summary: Commit a staged HTML to a public URL.
+      description: |
+        Only call this AFTER the user has reviewed prepareInsights output and explicitly said yes.
+        Pass the preview_token from prepareInsights.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublishRequest"
+      responses:
+        "200":
+          description: Published.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublishResponse"
+        "400":
+          description: Token expired/invalid.
+        "429":
+          description: Rate limited.
+        "503":
+          description: Service is in read-only mode.
+components:
+  schemas:
+    PrepareRequest:
+      type: object
+      required: [html]
+      properties:
+        html:
+          type: string
+          description: |
+            Self-contained HTML document. Embed images as data:image/* base64. Use inline SVG for diagrams.
+            No <script>, no <iframe>, no external CSS, no on* handlers — the server will reject otherwise.
+        title:
+          type: string
+          description: Page title (defaults to <title> tag content).
+        source:
+          type: string
+          description: Always "chatgpt-gpt" when called from this GPT.
+          default: chatgpt-gpt
+    PrepareResponse:
+      type: object
+      required: [preview_token, expires_in]
+      properties:
+        preview_token:
+          type: string
+          description: Opaque token redeemed by publishInsights within 5 minutes.
+        warnings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Warning"
+        size_bytes:
+          type: integer
+        expires_in:
+          type: integer
+          description: Seconds the preview_token is valid (always 300 in v0.1).
+    Warning:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [size, secrets_redacted_count]
+        bytes:
+          type: integer
+        count:
+          type: integer
+    PublishRequest:
+      type: object
+      required: [preview_token]
+      properties:
+        preview_token:
+          type: string
+        source:
+          type: string
+          default: chatgpt-gpt
+    PublishResponse:
+      type: object
+      required: [url, hash]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Public URL of the published page.
+        hash:
+          type: string
+          description: 12-char content hash.
+        cached:
+          type: boolean
+        size_bytes:
+          type: integer
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Machine-readable error code.
+        hint:
+          type: string
+        violations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Violation"
+        matches:
+          type: array
+          items:
+            $ref: "#/components/schemas/SecretMatch"
+    Violation:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [element, attribute, url-scheme, data-uri-type, css-expression]
+        name:
+          type: string
+        "on":
+          type: string
+        scheme:
+          type: string
+        mediaType:
+          type: string
+    SecretMatch:
+      type: object
+      required: [pattern]
+      properties:
+        pattern:
+          type: string
+        excerpt:
+          type: string

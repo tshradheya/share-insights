@@ -1,0 +1,1 @@
+../plugins/share-insights/skills/share-insights/share_insights.py

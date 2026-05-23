@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "share-insights": {
+      "type": "http",
+      "url": "https://share-insights-mcp.tshradheya.workers.dev/mcp"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+name = "share-insights-mcp"
+main = "src/index.ts"
+compatibility_date = "2024-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Service binding: in-process call to the share-insights API Worker.
+# Avoids the same-account workers.dev "loop" 404 that hits if you fetch()
+# a sibling worker via its public URL.
+[[services]]
+binding = "API"
+service = "share-insights"
+
+[vars]
+# Used only as the host portion of the in-process Request — the path is what
+# matters. Update when you move to a custom domain.
+API_BASE_URL = "https://share-insights.internal"

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Abuse policy — share-insights</title>
+  <style>
+    body { font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; max-width: 720px; padding: 56px 24px; margin: 0 auto; color: #1a1a1a; }
+    @media (prefers-color-scheme: dark) { body { color: #e5e7eb; background: #0b0b0c; } }
+    h1 { font-size: 28px; }
+    h2 { font-size: 18px; margin-top: 36px; }
+    code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; background: rgba(127,127,127,0.15); padding: 1px 5px; border-radius: 3px; }
+    form { display: grid; gap: 10px; max-width: 540px; }
+    label { font-size: 14px; }
+    input, textarea { font: inherit; padding: 8px 10px; border: 1px solid rgba(127,127,127,0.4); border-radius: 4px; background: transparent; color: inherit; }
+    textarea { min-height: 120px; }
+    button { padding: 10px 16px; border-radius: 4px; border: 1px solid rgba(127,127,127,0.5); background: rgba(127,127,127,0.1); color: inherit; cursor: pointer; font: inherit; }
+    button:hover { background: rgba(127,127,127,0.2); }
+    .ok { color: #16a34a; font-weight: 600; }
+    .err { color: #dc2626; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <p><a href="/">← share-insights</a></p>
+  <h1>Abuse policy</h1>
+
+  <h2>What we'll take down</h2>
+  <ul>
+    <li>Content that violates US law (CSAM, illegal-activity coordination, credible threats, doxxing).</li>
+    <li>Material posted without the subject's consent (private chat logs, leaked credentials, doxxing).</li>
+    <li>DMCA notices that meet the standard requirements.</li>
+    <li>Targeted harassment.</li>
+  </ul>
+
+  <h2>What we won't</h2>
+  <ul>
+    <li>Take down a page just because it's critical of you, your product, or your work.</li>
+    <li>Reveal who posted a page. (We don't store identifiers, so we couldn't if we tried.)</li>
+  </ul>
+
+  <h2>How to report</h2>
+  <p>Use the form below, or email <code>abuse@share-insights.pages.dev</code> with the URL and reason. Reviewed within 24 hours.</p>
+
+  <form id="report">
+    <label>URL of the page<input name="url" required placeholder="https://share-insights.pages.dev/a1b2c3d4e5f6"></label>
+    <label>Why it should be removed<textarea name="reason" required placeholder="Be specific. Cite the policy bullet above if you can."></textarea></label>
+    <label>Your email (optional, only if you want a response)<input name="reporter_email" type="email"></label>
+    <button type="submit">Submit report</button>
+    <p id="status" aria-live="polite"></p>
+  </form>
+
+  <h2>Operator</h2>
+  <p>This service is operated by an individual (not an Anthropic / OpenAI / etc. service). Personally responsible for reviewing reports. The backend stores only the rendered HTML, a timestamp, and a derived (non-reversible) IP hash. There is no per-user storage.</p>
+
+  <script>
+    document.getElementById("report").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const f = e.target;
+      const status = document.getElementById("status");
+      status.textContent = "Submitting…";
+      status.className = "";
+      const body = {
+        url: f.url.value,
+        reason: f.reason.value,
+        reporter_email: f.reporter_email.value || undefined,
+      };
+      try {
+        const r = await fetch("/api/report", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (r.ok) {
+          status.textContent = "Report received. We'll review within 24h.";
+          status.className = "ok";
+          f.reset();
+        } else {
+          status.textContent = "Submission failed (HTTP " + r.status + "). Try email instead.";
+          status.className = "err";
+        }
+      } catch (err) {
+        status.textContent = "Network error. Try email instead.";
+        status.className = "err";
+      }
+    });
+  </script>
+</body>
+</html>
