@@ -1,129 +1,235 @@
 # share-insights
 
-Publish a clean, shareable HTML page from any AI-coding session — Claude Code, Codex, Claude.ai / Cowork / Cursor (via MCP), or ChatGPT (via Custom GPT). One short URL, no signup, content-addressed, auto-deleted after 90 days of disuse.
+> Publish a clean, redacted HTML summary of any AI conversation to a short shareable URL.
+> Anonymous · content-addressed · unindexed · auto-deletes after 90 days.
 
-> **Status:** v1, hosted at `https://share-insights.pages.dev`.
+**Live:** <https://share-insights.pages.dev/>
+**Sample page:** <https://share-insights.tshradheya.workers.dev/34362d82b231>
+**Built by:** [Shradheya Thakre](https://github.com/tshradheya) · MIT licensed
 
-## How it works
+---
+
+## Why
+
+Long, productive sessions with Claude / ChatGPT / Cursor / Codex end up with insights worth sharing. PDF/Word exports are ugly, lose linking, and have no version history. share-insights turns the work you just did into a styled HTML page at a short URL like `share-insights.tshradheya.workers.dev/a1b2c3d4e5f6` — one URL, no signup, no install for ChatGPT users, one install command for Claude Code users.
+
+It's defense-in-depth around the obvious failure mode of "AI summarizes my session and leaks an API key": the agent redacts → user reviews the preview in chat → the server's regex scanner has the final say. A strict HTML allow-list rejects `<script>`, external resources, and event handlers, so a malicious page can't be hosted under our domain.
+
+---
+
+## How
 
 ```
 your AI session
       │
       ▼
-[skill prompts the model to]
-  1. summarize the session
+[skill / GPT / MCP tool prompts the model to]
+  1. summarize
   2. redact secrets / PII
-  3. fill the canonical HTML template
-  4. show you a preview
-  5. ask "publish?"
+  3. render the canonical HTML template
+  4. show you a preview in chat
+  5. ask "publish? yes/no"
       │
       ▼
 POST /api/publish  ──► [Cloudflare Worker]
-                         • per-IP rate limit
+                         • per-IP rate limit (KV)
                          • regex secret scan
-                         • strict-allowlist HTML sanitize
-                         • sha256[:12] content hash
+                         • strict-allowlist HTML sanitize (parse5)
+                         • sha256(html)[:12] as content hash
                          ▼
-                       [R2]
+                       [R2 bucket]
                          ▼
-        https://share-insights.pages.dev/<hash>
+        share-insights.tshradheya.workers.dev/<hash>
+        (cron sweeps R2 nightly, deletes objects unread for 90 days)
 ```
 
-## Install — Claude Code (one command)
+---
 
-This repo is a Claude Code plugin marketplace. From inside Claude Code:
+## Install
+
+### Claude Code <sub>(free, one command)</sub>
 
 ```
 /plugin marketplace add tshradheya/share-insights
 /plugin install share-insights@share-insights
 ```
 
-That installs:
+That installs both the `/share-insights` skill **and** auto-wires the hosted MCP server. Run `/share-insights` in any session.
 
-- The `/share-insights` skill (summarize → redact → preview → publish)
-- The bundled MCP server pointer at `share-insights-mcp.tshradheya.workers.dev/mcp` — so the same publish flow is available via the model's tool list whenever you want it
+### Claude Desktop <sub>(free, all plans)</sub>
 
-For local development against an uncommitted version of this repo, point the marketplace at the directory instead:
+Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
-```
-/plugin marketplace add /path/to/share-insights
-/plugin install share-insights@share-insights
-```
-
-## Install — Codex CLI
-
-Same Python CLI works standalone — invoke directly:
-
-```sh
-python3 cli/share_insights.py <file.html> --title "..."
+```json
+{
+  "mcpServers": {
+    "share-insights": {
+      "type": "http",
+      "url": "https://share-insights-mcp.tshradheya.workers.dev/mcp"
+    }
+  }
+}
 ```
 
-The Python file is a symlink into the plugin (`plugins/share-insights/skills/share-insights/share_insights.py` is the canonical copy).
+Restart Claude Desktop. In any chat: *"share this conversation."*
 
-## Install — Claude.ai / Cowork / Cursor / Desktop (MCP)
+### Claude.ai web <sub>(Pro / Team / Enterprise)</sub>
 
 Settings → Connectors → Add custom connector → paste:
 
 ```
-https://mcp.share-insights.pages.dev/sse
+https://share-insights-mcp.tshradheya.workers.dev/mcp
 ```
 
-The model will see two tools: `prepare_insights` (dry-run + warnings) and `publish_insights` (final commit). Both require your explicit consent at call time.
+### Cursor <sub>(free, all plans)</sub>
 
-## Install — ChatGPT.com (Custom GPT)
+Edit `~/.cursor/mcp.json` with the same `mcpServers` block as Claude Desktop.
 
-Open [Share Insights GPT](https://chat.openai.com/g/...) (link goes here after publish). Plus required.
+### ChatGPT.com <sub>(Plus required)</sub>
+
+Open the published GPT: <https://chatgpt.com/g/g-6a1137bf11748191a837919a8646853a-share-insights>
+
+After visiting once, you can `@share-insights` from any ChatGPT conversation to publish that conversation.
+
+### Codex CLI / standalone Python
+
+```sh
+git clone https://github.com/tshradheya/share-insights
+python3 share-insights/cli/share_insights.py your-file.html --title "..."
+```
+
+---
+
+## What's hosted where
+
+| Component | URL |
+|---|---|
+| API worker (publish, sanitize, store, serve) | `share-insights.tshradheya.workers.dev` |
+| MCP server (two-tool prepare+publish) | `share-insights-mcp.tshradheya.workers.dev/mcp` |
+| Landing + abuse | `share-insights.pages.dev` |
+| Source | `github.com/tshradheya/share-insights` |
+| Sample page | `share-insights.tshradheya.workers.dev/34362d82b231` |
+
+---
 
 ## Privacy
 
-- URLs are unguessable (sha256 prefix). Pages are not listed anywhere, not indexed (`noindex` + `robots.txt` Disallow).
-- Pages auto-delete 90 days after the last view.
-- Backend stores only the rendered HTML + minimal metadata (created_at, last_viewed_at, source-tool name). No user identifiers.
-- Anyone with the URL can read the page — there is no per-page password in v1.
-
-## Report a page
-
-Every page has a "Report this page" footer link, or email `abuse@share-insights.pages.dev`. Reviewed within 24h. Full policy at [/abuse](https://share-insights.pages.dev/abuse).
+- URLs are unguessable 12-char content hashes — no listing page exists.
+- `<meta name="robots" content="noindex,nofollow">` and `robots.txt: Disallow: /`.
+- No accounts. No tracking pixels. Backend stores only the rendered HTML + minimal metadata (`source`, `created_at`, `last_viewed_at`, salted IP hash).
+- Pages auto-delete **90 days after the last view** (cron sweeps R2 nightly).
+- Anyone with the URL can read the page — there is no per-page password.
 
 ## Limits
 
-- 10 MB max HTML upload (matches existing `html-upload` upstream). Use `--compress` if your page exceeds it.
-- 20 publishes per IP per day, 5 per hour.
-- After 5 rapid publishes you'll be asked to solve a Turnstile challenge.
-- Hard service spend cap: $50/mo. Above ceiling the API returns 503 until the next billing cycle.
+- 10 MB max HTML per upload (`--compress` shrinks embedded images).
+- 20 publishes / IP / day · 5 / hour. Turnstile challenge kicks in after 5 rapid attempts.
+- 503 above a $50/month hard spend cap.
+
+## Report a page
+
+Every page has a "Report this page" footer link → `/api/report` → Slack webhook → manual review within 24h. Full policy at <https://share-insights.pages.dev/abuse>.
+
+---
 
 ## Repo layout
 
-| Path | What |
-|---|---|
-| `.claude-plugin/marketplace.json` | Declares this repo as a Claude Code plugin marketplace |
-| `plugins/share-insights/` | The installable plugin — `.claude-plugin/plugin.json`, `.mcp.json`, and `skills/share-insights/{SKILL.md, share_insights.py}` |
-| `worker/` | Cloudflare Worker: `/api/prepare`, `/api/publish`, `/<hash>`, `/api/report`, cron TTL |
-| `mcp/` | Cloudflare Worker exposing the MCP server bundled by the plugin |
-| `cli/share_insights.py` | Symlink → the plugin's canonical Python CLI, for standalone use |
-| `chatgpt/` | OpenAPI spec + GPT instructions + Knowledge template + `PUBLISH.md` walkthrough |
-| `pages/` | Static landing + abuse pages |
-| `template/share-insights.html.tpl` | Canonical HTML template (source of truth) |
-| `scripts/sync-template.sh` | Stamps template into SKILL.md and chatgpt Knowledge file |
+```
+share-insights/
+├── .claude-plugin/marketplace.json     # Claude Code marketplace manifest
+├── plugins/share-insights/             # the installable plugin
+│   ├── .claude-plugin/plugin.json
+│   ├── .mcp.json                       # auto-wires the hosted MCP on install
+│   └── skills/share-insights/
+│       ├── SKILL.md                    # canonical agent instructions
+│       └── share_insights.py           # canonical Python uploader
+│
+├── worker/                             # Cloudflare Worker — the only real backend
+│   ├── src/
+│   │   ├── index.ts                    # routes + handlers
+│   │   ├── sanitize.ts                 # strict-allowlist HTML sanitizer (parse5)
+│   │   ├── secrets.ts                  # regex secret-pattern list
+│   │   └── ratelimit.ts                # per-IP KV rate limit
+│   └── wrangler.toml
+│
+├── mcp/                                # Hosted MCP Worker, calls the API worker via service binding
+│   └── src/index.ts
+│
+├── chatgpt/                            # ChatGPT Custom GPT artifacts
+│   ├── openapi.yaml                    # the Action schema
+│   ├── instructions.md                 # the GPT system prompt
+│   ├── share-insights-template.html    # Knowledge file uploaded to the GPT
+│   └── PUBLISH.md                      # step-by-step walkthrough
+│
+├── cli/share_insights.py               # symlink → plugin's canonical CLI
+├── pages/                              # Cloudflare Pages: landing + abuse
+├── template/share-insights.html.tpl    # source of truth for the page template
+└── scripts/sync-template.sh            # stamps template into SKILL.md + chatgpt Knowledge
+```
+
+---
 
 ## Local development
 
-See [docs in worker/README.md](worker/README.md) for the wrangler + Miniflare setup. TL;DR:
+### API worker
 
 ```sh
-cd worker && npm i && npx wrangler dev --local
-# in another shell:
-SHARE_INSIGHTS_URL=http://localhost:8787 python cli/share_insights.py /tmp/test.html --title "smoke test"
+cd worker
+npm install
+npx wrangler dev --local --persist-to .wrangler/state
 ```
 
-## Smoke tests
+`wrangler dev --local` uses Miniflare to emulate R2 + KV in-memory.
 
-1. Claude Code skill: `/share-insights` → confirm preview → URL works.
-2. MCP from Cursor: add the MCP URL, ask the agent to publish, check both consent prompts fire.
-3. ChatGPT GPT: open the GPT, ask it to publish, check `prepare` then `publish` both authorize.
-4. Rate limit: loop 25 publishes; the 21st should 429.
-5. Secret scanner: include `AKIAIOSFODNN7EXAMPLE` in the HTML; expect rejection naming the matched pattern.
-6. Sanitizer: include `<script>alert(1)</script>`; expect 400 listing the violation.
-7. TTL cron: invoke `wrangler triggers cron schedule` manually, check stale objects vanish.
-8. Abuse report: hit the footer link, confirm the queue triggers.
-9. Spend cap: flip `READ_ONLY` KV manually, confirm `/api/publish` returns 503.
+Smoke test against the local worker:
+
+```sh
+SHARE_INSIGHTS_URL=http://localhost:8787 \
+  python3 cli/share_insights.py /tmp/test.html --title smoke
+```
+
+### MCP server
+
+```sh
+cd mcp && npm install && npx wrangler dev --local --port 8788
+```
+
+### Pages site
+
+`pages/` is plain static HTML — just `open pages/index.html`.
+
+### Deploy
+
+Requires `nvm use 20` (wrangler 4 needs Node 20+) and a one-time `wrangler login`. Then:
+
+```sh
+( cd worker && npx wrangler deploy )
+( cd mcp    && npx wrangler deploy )
+npx wrangler pages deploy pages --project-name share-insights
+```
+
+After editing `template/share-insights.html.tpl`, run `scripts/sync-template.sh` to stamp the change into SKILL.md and the ChatGPT Knowledge file.
+
+---
+
+## Security posture
+
+| Threat | Mitigation |
+|---|---|
+| Secret / PII leak from session | LLM redaction → mandatory preview → server regex backstop (three layers) |
+| XSS via injected HTML | Strict allowlist sanitizer (parse5), CSP `default-src 'none'`, `noindex` |
+| Spam / R2 fill | Per-IP rate limits, Turnstile after burst, 90-day TTL, $50/mo hard cap |
+| Search-engine indexing of accidental shares | `noindex` meta + `X-Robots-Tag` + `robots.txt: Disallow: /` |
+| Malicious page reported | Footer report link → Slack webhook → manual delete within 24h |
+
+Detail in [the implementation plan](https://github.com/tshradheya/share-insights/blob/main/README.md#how) and `worker/src/sanitize.ts`.
+
+---
+
+## Credits
+
+Built by [Shradheya Thakre](https://github.com/tshradheya). Forked from the internal `html-upload` skill pattern. Cloudflare's free tier carries the entire stack. The plugin/marketplace structure follows the Claude Code spec.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

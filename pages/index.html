@@ -3,199 +3,879 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#7c3aed">
+  <title>share-insights — publish any AI conversation to a shareable URL</title>
+  <meta name="description" content="Turn any Claude / ChatGPT / Cursor session into a clean, redacted HTML page at a short share-insights URL. Anonymous, content-addressed, auto-deletes after 90 days.">
   <meta name="robots" content="noindex">
-  <title>share-insights — publish shareable summaries of AI sessions</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%237c3aed'/%3E%3Cstop offset='100%25' stop-color='%235b21b6'/%3E%3C/linearGradient%3E%3ClinearGradient id='b' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23ec4899'/%3E%3Cstop offset='100%25' stop-color='%23be185d'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='3' y='3' width='17' height='17' rx='4' fill='url(%23a)'/%3E%3Crect x='12' y='12' width='17' height='17' rx='4' fill='url(%23b)' opacity='.9'/%3E%3C/svg%3E">
   <style>
-    :root { --bg: #fff; --fg: #1a1a1a; --muted: #6b7280; --rule: #e5e7eb; --code-bg: #f3f4f6; --link: #2563eb; --accent: #f59e0b; }
+    :root {
+      --bg: #fafaf9;
+      --bg-elev: #ffffff;
+      --bg-soft: #f4f4f5;
+      --fg: #09090b;
+      --fg-soft: #3f3f46;
+      --muted: #71717a;
+      --muted-soft: #a1a1aa;
+      --rule: #e4e4e7;
+      --rule-soft: #f4f4f5;
+      --code-bg: #f4f4f5;
+      --hi-1: #7c3aed;
+      --hi-2: #ec4899;
+      --hi-3: #06b6d4;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
+      --shadow-lg: 0 1px 2px rgba(0,0,0,0.04), 0 20px 48px rgba(124,58,237,0.10), 0 6px 12px rgba(0,0,0,0.04);
+    }
     @media (prefers-color-scheme: dark) {
-      :root { --bg: #0b0b0c; --fg: #e5e7eb; --muted: #9ca3af; --rule: #1f2937; --code-bg: #161b22; --link: #60a5fa; --accent: #fbbf24; }
+      :root {
+        --bg: #09090b;
+        --bg-elev: #18181b;
+        --bg-soft: #18181b;
+        --fg: #fafafa;
+        --fg-soft: #d4d4d8;
+        --muted: #a1a1aa;
+        --muted-soft: #71717a;
+        --rule: #27272a;
+        --rule-soft: #18181b;
+        --code-bg: #18181b;
+        --hi-1: #a78bfa;
+        --hi-2: #f472b6;
+        --hi-3: #22d3ee;
+        --shadow-sm: 0 1px 2px rgba(0,0,0,0.5);
+        --shadow-md: 0 1px 2px rgba(0,0,0,0.5), 0 8px 32px rgba(0,0,0,0.35);
+        --shadow-lg: 0 1px 2px rgba(0,0,0,0.5), 0 24px 64px rgba(167,139,250,0.15), 0 6px 12px rgba(0,0,0,0.4);
+      }
     }
     * { box-sizing: border-box; }
-    html, body { margin: 0; background: var(--bg); color: var(--fg); }
-    body { font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; max-width: 760px; padding: 56px 24px 80px; margin: 0 auto; }
-    h1 { font-size: 36px; margin: 0 0 6px; line-height: 1.1; }
-    .tagline { color: var(--muted); font-size: 16px; margin: 0 0 12px; }
-    .pill { display: inline-block; background: var(--code-bg); color: var(--muted); padding: 2px 10px; border-radius: 999px; font-size: 12px; letter-spacing: 0.04em; margin-bottom: 28px; }
-    h2 { font-size: 22px; margin: 44px 0 8px; padding-top: 20px; border-top: 1px solid var(--rule); }
-    h2 .num { display: inline-block; width: 28px; height: 28px; line-height: 28px; border-radius: 50%; background: var(--accent); color: #fff; text-align: center; font-size: 14px; margin-right: 8px; vertical-align: 2px; }
-    h3 { font-size: 16px; margin: 24px 0 8px; }
-    p { margin: 10px 0; }
-    a { color: var(--link); }
-    a:hover { text-decoration: none; }
-    ul, ol { padding-left: 24px; }
-    li { margin: 6px 0; }
-    code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; background: var(--code-bg); padding: 1.5px 6px; border-radius: 3px; font-size: 13.5px; }
-    pre { background: var(--code-bg); padding: 14px 16px; border-radius: 6px; overflow-x: auto; font-size: 13px; line-height: 1.55; position: relative; }
-    pre code { background: transparent; padding: 0; font-size: inherit; }
-    .copy-btn { position: absolute; top: 8px; right: 8px; padding: 4px 10px; font-size: 11px; border-radius: 4px; border: 1px solid var(--rule); background: var(--bg); color: var(--muted); cursor: pointer; font-family: inherit; }
-    .copy-btn:hover { color: var(--fg); }
-    .copy-btn.copied { color: #16a34a; border-color: #16a34a; }
-    .card { border: 1px solid var(--rule); border-radius: 8px; padding: 20px 22px; margin: 12px 0; }
-    .card.header { display: flex; align-items: center; gap: 12px; }
-    .card.header .logo { font-size: 22px; }
-    .badge { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 11px; letter-spacing: 0.02em; background: rgba(245,158,11,0.15); color: var(--accent); margin-left: 6px; vertical-align: 2px; }
-    .badge.plan { background: rgba(96,165,250,0.15); color: var(--link); }
-    .row { display: grid; gap: 14px; grid-template-columns: repeat(2, 1fr); }
-    @media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
-    .row .card { margin: 0; }
-    .row .card h3 { margin-top: 0; }
-    footer { margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 13px; }
-    .lede { font-size: 17px; line-height: 1.55; }
-    .small { color: var(--muted); font-size: 13px; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); }
+    body {
+      font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      overflow-x: hidden;
+    }
+
+    /* Fixed gradient hairline */
+    .topline {
+      position: fixed; top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--hi-1), var(--hi-2), var(--hi-3));
+      z-index: 50;
+    }
+
+    /* Sticky nav */
+    nav.nav {
+      position: sticky; top: 3px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: color-mix(in oklab, var(--bg) 80%, transparent);
+      border-bottom: 1px solid color-mix(in oklab, var(--rule) 70%, transparent);
+      z-index: 40;
+    }
+    nav.nav .nav-inner {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    nav.nav .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--fg);
+      text-decoration: none;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      font-size: 15px;
+    }
+    nav.nav .links { margin-left: auto; display: flex; gap: 20px; align-items: center; }
+    nav.nav .links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: color 0.15s;
+    }
+    nav.nav .links a:hover { color: var(--fg); }
+    nav.nav .links .gh {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      background: var(--bg-elev);
+    }
+    @media (max-width: 600px) {
+      nav.nav .links a:not(.gh) { display: none; }
+    }
+
+    /* Mesh-gradient halo behind hero */
+    .hero-bg {
+      position: absolute;
+      top: -200px; left: 50%;
+      transform: translateX(-50%);
+      width: 1400px; height: 800px;
+      pointer-events: none;
+      z-index: -1;
+      background:
+        radial-gradient(circle at 25% 30%, color-mix(in oklab, var(--hi-1) 25%, transparent), transparent 50%),
+        radial-gradient(circle at 75% 25%, color-mix(in oklab, var(--hi-2) 22%, transparent), transparent 50%),
+        radial-gradient(circle at 50% 80%, color-mix(in oklab, var(--hi-3) 15%, transparent), transparent 60%);
+      filter: blur(50px);
+      opacity: 0.85;
+    }
+    /* Faint dotted texture */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: radial-gradient(circle, var(--rule) 1px, transparent 1px);
+      background-size: 24px 24px;
+      opacity: 0.3;
+      z-index: -2;
+    }
+
+    /* Shared container */
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; position: relative; }
+
+    /* HERO */
+    .hero { padding: 80px 0 56px; text-align: center; position: relative; }
+    .hero .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 6px 14px 6px 10px;
+      border-radius: 999px;
+      background: var(--bg-elev);
+      border: 1px solid var(--rule);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 28px;
+    }
+    .hero .eyebrow::before {
+      content: "";
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--hi-1), var(--hi-2));
+      box-shadow: 0 0 8px color-mix(in oklab, var(--hi-1) 50%, transparent);
+    }
+    .hero h1 {
+      font-size: clamp(40px, 6vw, 64px);
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      font-weight: 700;
+      margin: 0 0 20px;
+      background: linear-gradient(110deg, var(--fg) 30%, var(--hi-1) 55%, var(--hi-2) 75%, var(--fg) 95%);
+      background-size: 200% auto;
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+      animation: shimmer 10s linear infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: 0% center; }
+      100% { background-position: 200% center; }
+    }
+    .hero .sub {
+      font-size: clamp(17px, 2vw, 20px);
+      line-height: 1.5;
+      color: var(--fg-soft);
+      max-width: 640px;
+      margin: 0 auto 36px;
+    }
+    .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 22px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+      border: 1px solid transparent;
+    }
+    .cta-primary {
+      color: white;
+      background: linear-gradient(135deg, var(--hi-1) 0%, var(--hi-2) 100%);
+      box-shadow: 0 4px 16px color-mix(in oklab, var(--hi-1) 40%, transparent), 0 1px 2px rgba(0,0,0,0.1);
+    }
+    .cta-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px color-mix(in oklab, var(--hi-1) 50%, transparent), 0 1px 2px rgba(0,0,0,0.1); }
+    .cta-secondary {
+      color: var(--fg);
+      background: var(--bg-elev);
+      border-color: var(--rule);
+      box-shadow: var(--shadow-sm);
+    }
+    .cta-secondary:hover { transform: translateY(-2px); border-color: color-mix(in oklab, var(--hi-1) 35%, var(--rule)); }
+    .cta svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+    .hero-trust {
+      margin-top: 48px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted-soft);
+      font-size: 13px;
+    }
+    .hero-trust .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--muted-soft); }
+
+    /* Preview card */
+    .preview-section { padding: 32px 0 72px; }
+    .preview-card {
+      max-width: 980px;
+      margin: 0 auto;
+      border-radius: 16px;
+      overflow: hidden;
+      background: var(--bg-elev);
+      border: 1px solid var(--rule);
+      box-shadow: var(--shadow-lg);
+      position: relative;
+    }
+    .preview-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--hi-1), var(--hi-2), var(--hi-3));
+      z-index: 2;
+    }
+    .preview-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 14px 18px;
+      background: var(--bg-soft);
+      border-bottom: 1px solid var(--rule);
+    }
+    .preview-bar .dot { width: 11px; height: 11px; border-radius: 50%; }
+    .preview-bar .dot.r { background: #fb7185; }
+    .preview-bar .dot.y { background: #fbbf24; }
+    .preview-bar .dot.g { background: #34d399; }
+    .preview-bar .url {
+      margin-left: 14px;
+      flex: 1;
+      font-family: ui-monospace, "SF Mono", Consolas, monospace;
+      font-size: 12.5px;
+      color: var(--muted);
+      background: var(--bg-elev);
+      padding: 5px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--rule);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .preview-body {
+      padding: 32px;
+      min-height: 320px;
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 32px;
+    }
+    @media (max-width: 720px) {
+      .preview-body { grid-template-columns: 1fr; padding: 24px; }
+    }
+    .preview-rail .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--fg);
+      background: linear-gradient(90deg, color-mix(in oklab, var(--hi-1) 10%, var(--bg-elev)), color-mix(in oklab, var(--hi-2) 8%, var(--bg-elev)));
+      border: 1px solid color-mix(in oklab, var(--hi-1) 30%, var(--rule));
+      padding: 4px 10px 4px 8px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+    }
+    .preview-rail .chip::before {
+      content: "";
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--hi-1), var(--hi-2));
+      box-shadow: 0 0 6px color-mix(in oklab, var(--hi-1) 50%, transparent);
+    }
+    .preview-rail .toc {
+      list-style: none;
+      padding: 0;
+      margin: 16px 0 0;
+      font-size: 13px;
+    }
+    .preview-rail .toc li { padding: 6px 10px; color: var(--muted); border-radius: 6px; }
+    .preview-rail .toc li.active { color: var(--fg); background: var(--bg-soft); }
+    .preview-rail .toc li.active::before { content: "→ "; color: var(--hi-1); }
+
+    .preview-content h2 {
+      font-size: 28px;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      font-weight: 700;
+      margin: 0 0 12px;
+    }
+    .preview-content .meta { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+    .preview-content h3 { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 600; margin: 24px 0 10px; }
+    .preview-content h3 .icon {
+      width: 26px; height: 26px;
+      border-radius: 7px;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, color-mix(in oklab, var(--hi-1) 20%, transparent), color-mix(in oklab, var(--hi-2) 20%, transparent));
+      color: var(--hi-1);
+      border: 1px solid color-mix(in oklab, var(--hi-1) 18%, var(--rule));
+    }
+    .preview-content h3 .icon svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .preview-content p, .preview-content li { color: var(--fg-soft); font-size: 14.5px; line-height: 1.6; }
+    .preview-content ul { padding-left: 20px; margin: 8px 0; }
+    .preview-content li::marker { color: var(--hi-1); }
+    .preview-cta { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--rule); }
+    .preview-cta a {
+      color: var(--hi-1);
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+      border-bottom: 1px solid color-mix(in oklab, var(--hi-1) 35%, transparent);
+    }
+    .preview-cta a:hover { border-bottom-color: var(--hi-1); }
+
+    /* Section frame */
+    section.frame { padding: 80px 0; position: relative; }
+    section.frame.alt { background: var(--bg-soft); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+    .section-head { text-align: center; margin-bottom: 48px; }
+    .section-head .kicker {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--hi-1);
+      margin-bottom: 12px;
+    }
+    .section-head h2 {
+      font-size: clamp(28px, 4vw, 40px);
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      font-weight: 700;
+      margin: 0 0 12px;
+    }
+    .section-head p { color: var(--muted); max-width: 540px; margin: 0 auto; font-size: 16.5px; }
+
+    /* Install grid */
+    .install-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--bg-elev);
+      border: 1px solid var(--rule);
+      border-radius: 14px;
+      padding: 24px;
+      position: relative;
+      transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+    }
+    .card:hover { transform: translateY(-2px); border-color: color-mix(in oklab, var(--hi-1) 25%, var(--rule)); box-shadow: var(--shadow-md); }
+    .card .card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+    .card .logo {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      background: linear-gradient(135deg, color-mix(in oklab, var(--hi-1) 15%, transparent), color-mix(in oklab, var(--hi-2) 12%, transparent));
+      border: 1px solid color-mix(in oklab, var(--hi-1) 20%, var(--rule));
+    }
+    .card h3 { font-size: 16px; margin: 0; font-weight: 600; }
+    .card .plan {
+      display: inline-flex;
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--bg-soft);
+      border: 1px solid var(--rule);
+      margin-top: 4px;
+    }
+    .card .plan.free { color: #16a34a; border-color: color-mix(in oklab, #16a34a 35%, var(--rule)); background: color-mix(in oklab, #16a34a 8%, var(--bg-elev)); }
+    @media (prefers-color-scheme: dark) {
+      .card .plan.free { color: #4ade80; }
+    }
+    .card .desc { color: var(--fg-soft); font-size: 14px; line-height: 1.55; margin: 14px 0 14px; }
+    .card .cmd {
+      position: relative;
+      background: var(--code-bg);
+      color: var(--fg);
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      padding: 12px 44px 12px 14px;
+      font-family: ui-monospace, "SF Mono", Consolas, monospace;
+      font-size: 12.5px;
+      line-height: 1.6;
+      overflow-x: auto;
+      white-space: pre;
+    }
+    .card .cmd::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--hi-1), var(--hi-2));
+      border-radius: 8px 8px 0 0;
+      opacity: 0.7;
+    }
+    .copy {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      border-radius: 5px;
+      border: 1px solid var(--rule);
+      background: var(--bg-elev);
+      color: var(--muted);
+      cursor: pointer;
+      font-family: inherit;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .copy:hover { color: var(--fg); }
+    .copy.ok { color: #16a34a; border-color: color-mix(in oklab, #16a34a 35%, var(--rule)); }
+    .card .followup {
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .card .followup code { font-family: ui-monospace, Consolas, monospace; background: var(--code-bg); padding: 1px 5px; border-radius: 3px; font-size: 12.5px; color: var(--fg); border: 1px solid var(--rule); }
+    .card a.cta-link { color: var(--hi-1); text-decoration: none; font-weight: 500; border-bottom: 1px solid color-mix(in oklab, var(--hi-1) 30%, transparent); }
+    .card a.cta-link:hover { border-bottom-color: var(--hi-1); }
+
+    /* How it works */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      counter-reset: step;
+    }
+    .step {
+      background: var(--bg-elev);
+      border: 1px solid var(--rule);
+      border-radius: 14px;
+      padding: 28px 24px 24px;
+      position: relative;
+    }
+    .step::before {
+      counter-increment: step;
+      content: counter(step);
+      position: absolute;
+      top: -14px; left: 24px;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--hi-1), var(--hi-2));
+      color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      box-shadow: 0 4px 12px color-mix(in oklab, var(--hi-1) 40%, transparent);
+    }
+    .step h3 { margin: 8px 0 8px; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+    .step p { color: var(--fg-soft); font-size: 14px; line-height: 1.6; margin: 0; }
+
+    /* Privacy grid */
+    .privacy-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .privacy-tile {
+      padding: 18px 20px;
+      border-radius: 12px;
+      background: var(--bg-elev);
+      border: 1px solid var(--rule);
+    }
+    .privacy-tile .ic {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, color-mix(in oklab, var(--hi-1) 18%, transparent), color-mix(in oklab, var(--hi-2) 18%, transparent));
+      color: var(--hi-1);
+      margin-bottom: 10px;
+    }
+    .privacy-tile .ic svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .privacy-tile h4 { font-size: 14px; font-weight: 600; margin: 0 0 6px; }
+    .privacy-tile p { font-size: 13.5px; color: var(--muted); line-height: 1.55; margin: 0; }
+
+    /* Closing CTA banner */
+    .cta-banner {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 48px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, color-mix(in oklab, var(--hi-1) 12%, var(--bg-elev)) 0%, color-mix(in oklab, var(--hi-2) 10%, var(--bg-elev)) 100%);
+      border: 1px solid color-mix(in oklab, var(--hi-1) 25%, var(--rule));
+      box-shadow: var(--shadow-lg);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .cta-banner h2 { font-size: clamp(24px, 3vw, 32px); line-height: 1.2; letter-spacing: -0.02em; margin: 0 0 12px; }
+    .cta-banner p { color: var(--fg-soft); font-size: 16px; max-width: 480px; margin: 0 auto 24px; }
+
+    /* Footer */
+    footer.foot {
+      padding: 36px 24px 48px;
+      border-top: 1px solid var(--rule);
+      color: var(--muted);
+      font-size: 13.5px;
+    }
+    footer.foot .inner {
+      max-width: 1180px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: center;
+    }
+    footer.foot a { color: var(--muted); text-decoration: none; }
+    footer.foot a:hover { color: var(--fg); }
+    footer.foot .left { display: inline-flex; align-items: center; gap: 8px; }
+    footer.foot .right { display: inline-flex; gap: 20px; align-items: center; flex-wrap: wrap; }
   </style>
 </head>
 <body>
-  <span class="pill">SHARE-INSIGHTS · v0.1</span>
-  <h1>Turn any AI session into a clean, shareable URL</h1>
-  <p class="lede">Ask your AI to summarize what you just did, and publish the result to a short URL like <code>share-insights.pages.dev/a1b2c3d4e5f6</code>. No accounts. No tracking. Auto-deleted after 90 days. Works for Claude, ChatGPT, Cursor, Codex.</p>
 
-  <h2><span class="num">1</span>Install for your AI tool</h2>
-  <p>Pick the tool you use. All paths end at the same backend; the URL format is identical.</p>
+  <div class="topline" aria-hidden="true"></div>
 
-  <div class="card header">
-    <span class="logo">🤖</span>
-    <div>
-      <h3 style="margin:0;">Claude Desktop <span class="badge plan">free, all plans</span></h3>
-      <p class="small" style="margin:2px 0 0;">Works on the Claude desktop app for Mac &amp; Windows.</p>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="/" class="brand">
+        <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true">
+          <defs>
+            <linearGradient id="navlogoA" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#7c3aed"/><stop offset="100%" stop-color="#5b21b6"/>
+            </linearGradient>
+            <linearGradient id="navlogoB" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#ec4899"/><stop offset="100%" stop-color="#be185d"/>
+            </linearGradient>
+          </defs>
+          <rect x="3" y="3" width="17" height="17" rx="4" fill="url(#navlogoA)"/>
+          <rect x="12" y="12" width="17" height="17" rx="4" fill="url(#navlogoB)" opacity="0.9"/>
+        </svg>
+        share-insights
+      </a>
+      <div class="links">
+        <a href="#install">Install</a>
+        <a href="#how">How it works</a>
+        <a href="#privacy">Privacy</a>
+        <a href="https://github.com/tshradheya/share-insights" class="gh" target="_blank" rel="noopener">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.6.5.5 5.6.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.6v-2.2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.2 1.2.9-.3 1.9-.4 2.9-.4s2 .1 2.9.4c2.2-1.5 3.2-1.2 3.2-1.2.6 1.6.2 2.8.1 3.1.7.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.2c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.6 18.4.5 12 .5z"/></svg>
+          GitHub
+        </a>
+      </div>
     </div>
-  </div>
-  <p>Open (or create) <code>~/Library/Application Support/Claude/claude_desktop_config.json</code> and add a <code>share-insights</code> entry under <code>mcpServers</code>:</p>
-  <pre><button class="copy-btn" data-copy>copy</button><code>{
+  </nav>
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="hero-bg" aria-hidden="true"></div>
+    <div class="wrap">
+      <span class="eyebrow">v0.1 · Ship-ready</span>
+      <h1>Publish any AI conversation<br>as a shareable URL.</h1>
+      <p class="sub">share-insights turns a Claude / ChatGPT / Cursor / Codex session into a clean, redacted HTML page at a short URL. No accounts, no tracking, auto-deleted after 90 days.</p>
+      <div class="cta-row">
+        <a class="cta cta-primary" href="#install">
+          Install in 30 seconds
+          <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </a>
+        <a class="cta cta-secondary" href="https://share-insights.tshradheya.workers.dev/34362d82b231" target="_blank" rel="noopener">
+          See a sample page
+          <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </a>
+      </div>
+      <div class="hero-trust">
+        <span>Built by <a href="https://github.com/tshradheya" target="_blank" rel="noopener" style="color: inherit; text-decoration: none; border-bottom: 1px dashed currentColor;">Shradheya Thakre</a></span>
+        <span class="dot"></span>
+        <span>Cloudflare Workers + R2</span>
+        <span class="dot"></span>
+        <span>MIT license</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- LIVE PREVIEW -->
+  <section class="preview-section">
+    <div class="wrap">
+      <div class="preview-card">
+        <div class="preview-bar">
+          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          <span class="url">https://share-insights.tshradheya.workers.dev/34362d82b231</span>
+        </div>
+        <div class="preview-body">
+          <div class="preview-rail">
+            <span class="chip">Claude Code</span>
+            <span class="chip" style="background: var(--bg-elev); border-color: var(--rule); color: var(--muted);"></span>
+            <ul class="toc" aria-hidden="true">
+              <li class="active">TL;DR</li>
+              <li>Decisions</li>
+              <li>Findings</li>
+              <li>Code &amp; diffs</li>
+              <li>Open questions</li>
+              <li>Next steps</li>
+            </ul>
+          </div>
+          <div class="preview-content">
+            <h2>Migrating session uploader from S3 to Cloudflare R2</h2>
+            <p class="meta">An AI-generated session summary. Unindexed. Auto-deletes 90 days after the last view.</p>
+            <h3>
+              <span class="icon"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg></span>
+              TL;DR
+            </h3>
+            <p>Ported the internal <code>html-upload</code> skill into a public service: <strong>anonymous, content-addressed, auto-deletes after 90 days</strong>. Cloudflare Workers + R2 + Pages; about 700 LOC and one weekend.</p>
+            <h3>
+              <span class="icon"><svg viewBox="0 0 24 24"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+              Decisions
+            </h3>
+            <ul>
+              <li>Cloudflare over AWS — single account, no egress fees</li>
+              <li>Server-side sanitize, not client-side render</li>
+              <li>Content-addressed URLs (<code>sha256[:12]</code>) — free dedup</li>
+            </ul>
+            <div class="preview-cta">
+              <a href="https://share-insights.tshradheya.workers.dev/34362d82b231" target="_blank" rel="noopener">Open full page →</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INSTALL -->
+  <section class="frame alt" id="install">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">Install</span>
+        <h2>Pick your AI tool</h2>
+        <p>All paths talk to the same backend. URLs are identical.</p>
+      </div>
+      <div class="install-grid">
+
+        <div class="card">
+          <div class="card-head">
+            <span class="logo">⌨️</span>
+            <div><h3>Claude Code</h3><span class="plan free">Free · One command</span></div>
+          </div>
+          <p class="desc">Installs the <code>/share-insights</code> skill <em>and</em> auto-wires the hosted MCP server.</p>
+          <div class="cmd"><button class="copy" data-copy>copy</button>/plugin marketplace add tshradheya/share-insights
+/plugin install share-insights@share-insights</div>
+          <p class="followup">Then say <code>/share-insights</code> in any session.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <span class="logo">🤖</span>
+            <div><h3>Claude Desktop</h3><span class="plan free">Free · All plans</span></div>
+          </div>
+          <p class="desc">Edit <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>:</p>
+          <div class="cmd"><button class="copy" data-copy>copy</button>{
   "mcpServers": {
     "share-insights": {
+      "type": "http",
       "url": "https://share-insights-mcp.tshradheya.workers.dev/mcp"
     }
   }
-}</code></pre>
-  <p>Quit and relaunch Claude Desktop. In any chat say "share this conversation" — Claude will call the <code>prepare_insights</code> tool, show you what's about to publish, ask you to confirm, then call <code>publish_insights</code>.</p>
+}</div>
+          <p class="followup">Quit + relaunch. Then say "share this conversation."</p>
+        </div>
 
-  <div class="card header">
-    <span class="logo">🌐</span>
-    <div>
-      <h3 style="margin:0;">Claude.ai web <span class="badge plan">Pro / Team / Enterprise</span></h3>
-      <p class="small" style="margin:2px 0 0;">Custom Connectors require a paid plan.</p>
-    </div>
-  </div>
-  <ol>
-    <li>Open <a href="https://claude.ai/settings/connectors">claude.ai/settings/connectors</a></li>
-    <li>Click <strong>Add custom connector</strong></li>
-    <li>Paste this URL:</li>
-  </ol>
-  <pre><button class="copy-btn" data-copy>copy</button><code>https://share-insights-mcp.tshradheya.workers.dev/mcp</code></pre>
-  <p>If you don't see "Add custom connector," your plan or org settings don't have it enabled — use Claude Desktop instead (above).</p>
+        <div class="card">
+          <div class="card-head">
+            <span class="logo">🌐</span>
+            <div><h3>Claude.ai web</h3><span class="plan">Pro · Team · Enterprise</span></div>
+          </div>
+          <p class="desc">Open <a class="cta-link" href="https://claude.ai/settings/connectors" target="_blank" rel="noopener">claude.ai/settings/connectors</a> → Add custom connector → paste:</p>
+          <div class="cmd"><button class="copy" data-copy>copy</button>https://share-insights-mcp.tshradheya.workers.dev/mcp</div>
+        </div>
 
-  <div class="card header">
-    <span class="logo">🖱️</span>
-    <div>
-      <h3 style="margin:0;">Cursor <span class="badge plan">free, all plans</span></h3>
-    </div>
-  </div>
-  <p>Open (or create) <code>~/.cursor/mcp.json</code> and add:</p>
-  <pre><button class="copy-btn" data-copy>copy</button><code>{
+        <div class="card">
+          <div class="card-head">
+            <span class="logo">🖱️</span>
+            <div><h3>Cursor</h3><span class="plan free">Free · All plans</span></div>
+          </div>
+          <p class="desc">Add to <code>~/.cursor/mcp.json</code>:</p>
+          <div class="cmd"><button class="copy" data-copy>copy</button>{
   "mcpServers": {
     "share-insights": {
+      "type": "http",
       "url": "https://share-insights-mcp.tshradheya.workers.dev/mcp"
     }
   }
-}</code></pre>
-  <p>Restart Cursor. The tools show up in Settings → MCP.</p>
+}</div>
+          <p class="followup">Restart Cursor. Tools appear in Settings → MCP.</p>
+        </div>
 
-  <div class="card header">
-    <span class="logo">⌨️</span>
-    <div>
-      <h3 style="margin:0;">Claude Code <span class="badge plan">free, one command</span></h3>
-      <p class="small" style="margin:2px 0 0;">Installs both the <code>/share-insights</code> skill and the bundled MCP server.</p>
+        <div class="card">
+          <div class="card-head">
+            <span class="logo">💬</span>
+            <div><h3>ChatGPT.com</h3><span class="plan">Plus required</span></div>
+          </div>
+          <p class="desc">Open the published Custom GPT once — then <code>@share-insights</code> from any chat.</p>
+          <p class="followup" style="margin-top: 14px;">
+            <a class="cta-link" href="https://chatgpt.com/g/g-6a1137bf11748191a837919a8646853a-share-insights" target="_blank" rel="noopener">Open share-insights GPT →</a>
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <span class="logo">📟</span>
+            <div><h3>Standalone CLI</h3><span class="plan free">Any platform</span></div>
+          </div>
+          <p class="desc">For Codex, scripts, or any agent that can shell out:</p>
+          <div class="cmd"><button class="copy" data-copy>copy</button>git clone https://github.com/tshradheya/share-insights
+python3 share-insights/cli/share_insights.py file.html</div>
+        </div>
+
+      </div>
     </div>
-  </div>
-  <p>From inside Claude Code, run:</p>
-  <pre><button class="copy-btn" data-copy>copy</button><code>/plugin marketplace add tshradheya/share-insights
-/plugin install share-insights@share-insights</code></pre>
-  <p>Then in any session: <code>/share-insights</code>.</p>
+  </section>
 
-  <div class="card header">
-    <span class="logo">📟</span>
-    <div>
-      <h3 style="margin:0;">Codex CLI / standalone Python <span class="badge plan">all platforms</span></h3>
+  <!-- HOW IT WORKS -->
+  <section class="frame" id="how">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">How it works</span>
+        <h2>Three layers of defense before anything goes live</h2>
+        <p>An anonymous publishing endpoint is a credential-leak engine without guardrails. We have three.</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <h3>Agent redacts in chat</h3>
+          <p>The skill / GPT / MCP tool prompts the model to strip API keys, JWTs, home directory paths, customer names — and produce a "Redactions" list so you can see what was removed.</p>
+        </div>
+        <div class="step">
+          <h3>You confirm the preview</h3>
+          <p>The agent shows you the rendered preview <em>in the chat itself</em> and asks "publish? yes/no". Nothing is uploaded without your explicit yes.</p>
+        </div>
+        <div class="step">
+          <h3>Server has the final say</h3>
+          <p>A regex secret scanner + strict HTML allow-list (no <code>&lt;script&gt;</code>, no external resources, no <code>on*</code> handlers) runs server-side before the page touches R2.</p>
+        </div>
+      </div>
     </div>
-  </div>
-  <pre><button class="copy-btn" data-copy>copy</button><code>git clone https://github.com/tshradheya/share-insights
-python3 share-insights/cli/share_insights.py your-file.html --title "..."</code></pre>
+  </section>
 
-  <div class="card header">
-    <span class="logo">💬</span>
-    <div>
-      <h3 style="margin:0;">ChatGPT.com <span class="badge plan">Plus required</span></h3>
-      <p class="small" style="margin:2px 0 0;">Use it inside its own chat, or <code>@share-insights</code> from any conversation.</p>
+  <!-- PRIVACY -->
+  <section class="frame alt" id="privacy">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">Privacy</span>
+        <h2>Made to be safe by default</h2>
+      </div>
+      <div class="privacy-grid">
+        <div class="privacy-tile">
+          <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+          <h4>Unguessable URLs</h4>
+          <p>12-char content hash. No listing endpoint exists.</p>
+        </div>
+        <div class="privacy-tile">
+          <span class="ic"><svg viewBox="0 0 24 24"><path d="M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+          <h4>Not indexed</h4>
+          <p><code>noindex</code> meta + <code>robots.txt: Disallow: /</code>.</p>
+        </div>
+        <div class="privacy-tile">
+          <span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+          <h4>90-day TTL</h4>
+          <p>Auto-deleted after 90 days of no views.</p>
+        </div>
+        <div class="privacy-tile">
+          <span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>
+          <h4>No accounts</h4>
+          <p>No login, no tracking. Only a salted IP hash for rate-limiting.</p>
+        </div>
+        <div class="privacy-tile">
+          <span class="ic"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <h4>Open source</h4>
+          <p>MIT-licensed. Run it yourself if you want.</p>
+        </div>
+        <div class="privacy-tile">
+          <span class="ic"><svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></span>
+          <h4>One-click takedown</h4>
+          <p>Every page has a Report link. Reviewed within 24h.</p>
+        </div>
+      </div>
     </div>
-  </div>
-  <ol>
-    <li>Open the GPT once so it lands in your sidebar: <a href="https://chatgpt.com/g/g-6a1137bf11748191a837919a8646853a-share-insights">share-insights GPT</a></li>
-    <li>From then on, in <em>any</em> ChatGPT conversation type <code>@share-insights</code> followed by "publish this conversation". ChatGPT will hand off the current context to the GPT, which calls the publish action and returns a URL inline.</li>
-    <li>Or just continue chatting inside the GPT itself — same flow, just less convenient if you started elsewhere.</li>
-  </ol>
+  </section>
 
-  <h2><span class="num">2</span>Don't want to install anything? Use any AI as-is</h2>
-  <p>Works for free ChatGPT, Claude.ai (any plan), Gemini, anything. Three steps:</p>
-  <ol>
-    <li>Paste this prompt at the end of your AI conversation:</li>
-  </ol>
-  <pre><button class="copy-btn" data-copy>copy</button><code>Summarize this conversation into a self-contained HTML document I can publish.
+  <!-- CTA BANNER -->
+  <section class="frame">
+    <div class="wrap">
+      <div class="cta-banner">
+        <h2>Ready to publish your first session?</h2>
+        <p>Drop one command in your AI tool, ask it to share your conversation, and get a URL you can paste anywhere.</p>
+        <div class="cta-row">
+          <a class="cta cta-primary" href="#install">
+            Pick your install
+            <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </a>
+          <a class="cta cta-secondary" href="https://github.com/tshradheya/share-insights" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 .5C5.6.5.5 5.6.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.6v-2.2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.2 1.2.9-.3 1.9-.4 2.9-.4s2 .1 2.9.4c2.2-1.5 3.2-1.2 3.2-1.2.6 1.6.2 2.8.1 3.1.7.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.2c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.6 18.4.5 12 .5z"/></svg>
+            Star on GitHub
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
 
-Required structure: sections for TL;DR, Decisions, Findings, Code &amp; diffs, Open Questions, Next Steps. Include only sections that have real content.
-
-REDACT aggressively before writing: replace anything that looks like an API key (AKIA…, ghp_…, sk-…, sk-ant-…, AIza…, xox*-…), JWT (eyJ…eyJ…), password= or Authorization: Bearer values, paths under /Users/me/ or /home/me/, internal hostnames, customer/account names not already public, and personal email addresses. Note every redaction in a "Redactions" section at the bottom.
-
-The HTML must be a complete document. Do NOT include &lt;script&gt;, &lt;iframe&gt;, external CSS/JS, &lt;link&gt;, &lt;form&gt;, or any on* event attributes — the publisher rejects them. Diagrams must be inline SVG. Images must be base64 data: URIs. Use embedded CSS only.
-
-Output ONLY the HTML, starting with &lt;!doctype html&gt; — no commentary before or after.</code></pre>
-  <ol start="2">
-    <li>Copy the entire HTML the AI gives you.</li>
-    <li>Paste into <a href="/new.html"><code>share-insights.pages.dev/new</code></a> (publish form — coming with v0.2) or, for now, run via the API:</li>
-  </ol>
-  <pre><button class="copy-btn" data-copy>copy</button><code>curl -X POST https://share-insights.tshradheya.workers.dev/api/publish \
-  -H 'content-type: application/json' \
-  -H 'user-agent: share-insights-manual/0.1' \
-  --data @- &lt;&lt;EOF
-{"html": $(jq -Rs . &lt; your-file.html), "title": "your title"}
-EOF</code></pre>
-
-  <h2><span class="num">3</span>Ask your AI to install it for you</h2>
-  <p>If you're already in a chat with Claude, ChatGPT, etc., paste this and the AI will walk you through the right install for the tool you're in:</p>
-  <pre><button class="copy-btn" data-copy>copy</button><code>I want to install the share-insights MCP server so I can publish summaries of our conversations to share-insights.pages.dev.
-
-Please:
-1. Detect which AI tool I'm using (you're it).
-2. Tell me the exact file to edit OR setting to change for THIS tool.
-3. Give me the snippet to paste:
-   - MCP URL: https://share-insights-mcp.tshradheya.workers.dev/mcp
-   - The MCP exposes two tools: prepare_insights(html, title?) and publish_insights(preview_token).
-4. Walk me through it step by step. Ask one question at a time.
-5. After install, test it by asking me what we just worked on, summarize it, redact secrets, show me a preview, ask permission, then publish.</code></pre>
-
-  <h2><span class="num">4</span>Privacy &amp; limits</h2>
-  <ul>
-    <li>URLs are unguessable 12-char content hashes. No listing page, not indexed (<code>noindex</code> + <code>robots.txt: Disallow: /</code>).</li>
-    <li>Pages auto-delete <strong>90 days after the last view</strong>.</li>
-    <li>No accounts, no identifiers. Only the rendered HTML + minimal metadata.</li>
-    <li>Anyone with the URL can read the page. No per-page password in v0.1.</li>
-    <li>10 MB max HTML, 20 publishes per IP per day, 5 per hour.</li>
-    <li>Every page has a <em>Report this page</em> footer link reviewed within 24h. <a href="/abuse">Full policy →</a></li>
-  </ul>
-
-  <footer>
-    Source code on <a href="https://github.com/&lt;you&gt;/share-insights">GitHub</a> · <a href="/abuse">Abuse policy</a> · Built on Cloudflare Workers + R2
+  <footer class="foot">
+    <div class="inner">
+      <span class="left">
+        <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+          <defs>
+            <linearGradient id="fa" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#7c3aed"/><stop offset="100%" stop-color="#5b21b6"/></linearGradient>
+            <linearGradient id="fb" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#ec4899"/><stop offset="100%" stop-color="#be185d"/></linearGradient>
+          </defs>
+          <rect x="3" y="3" width="17" height="17" rx="4" fill="url(#fa)"/>
+          <rect x="12" y="12" width="17" height="17" rx="4" fill="url(#fb)" opacity="0.9"/>
+        </svg>
+        <span>share-insights · MIT · built by <a href="https://github.com/tshradheya" target="_blank" rel="noopener">Shradheya Thakre</a></span>
+      </span>
+      <span class="right">
+        <a href="https://github.com/tshradheya/share-insights" target="_blank" rel="noopener">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: -2px; margin-right: 4px;" aria-hidden="true"><path d="M12 .5C5.6.5.5 5.6.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.6v-2.2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.2 1.2.9-.3 1.9-.4 2.9-.4s2 .1 2.9.4c2.2-1.5 3.2-1.2 3.2-1.2.6 1.6.2 2.8.1 3.1.7.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.2c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.6 18.4.5 12 .5z"/></svg>
+          Source repo
+        </a>
+        <a href="/abuse">Abuse policy</a>
+        <a href="https://share-insights.tshradheya.workers.dev/34362d82b231" target="_blank" rel="noopener">Sample page</a>
+        <a href="https://github.com/tshradheya" target="_blank" rel="noopener">@tshradheya</a>
+      </span>
+    </div>
   </footer>
 
   <script>
     document.querySelectorAll('[data-copy]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const pre = btn.closest('pre');
-        const code = pre.querySelector('code').textContent;
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const cmd = btn.parentElement;
+        const text = cmd.textContent.replace(/^copy/, '').trim();
         try {
-          await navigator.clipboard.writeText(code);
+          await navigator.clipboard.writeText(text);
           btn.textContent = 'copied';
-          btn.classList.add('copied');
-          setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 1500);
+          btn.classList.add('ok');
+          setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('ok'); }, 1500);
         } catch {
           btn.textContent = 'copy failed';
         }
