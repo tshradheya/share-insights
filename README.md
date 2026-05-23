@@ -228,7 +228,7 @@ Detail in [the implementation plan](https://github.com/tshradheya/share-insights
 
 ## Credits
 
-Built by [Shradheya Thakre](https://github.com/tshradheya). Forked from the internal `html-upload` skill pattern. Cloudflare's free tier carries the entire stack. The plugin/marketplace structure follows the Claude Code spec.
+Built by [Shradheya Thakre](https://github.com/tshradheya). Inspired by an internal HTML-publishing skill I worked with at my day job — same minimal CLI + JSONL-ledger pattern, redone for a public, anonymous endpoint. Cloudflare's free tier carries the entire stack. Plugin/marketplace structure follows the Claude Code spec.
 
 ## License
 

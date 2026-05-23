@@ -4,7 +4,8 @@ Reads an HTML file, scans it locally for secret patterns, uploads to the
 share-insights API, prints the shareable URL, and appends a JSONL record to
 ~/.share-insights/ledger.jsonl so the URL stays findable later.
 
-Forked from the internal html-upload skill — same UX, anonymous auth, no JWT.
+UX inspired by an internal HTML-publishing skill — same single-file CLI shape
+and JSONL ledger, redone for an anonymous public endpoint (no JWT, no auth).
 
 Usage:
   python share_insights.py <file.html>

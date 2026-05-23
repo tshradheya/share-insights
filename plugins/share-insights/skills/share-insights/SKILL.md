@@ -30,7 +30,7 @@ Strip and replace with `[REDACTED:<reason>]`:
 
 - Absolute paths under `/Users/<name>/`, `/home/<name>/` — keep only the project-relative portion.
 - API keys: anything matching `AKIA[A-Z0-9]{16}`, `ghp_*`, `sk-*`, `sk_live_*`, `xox*-*`, Google `AIza*`, JWT triple-blob `eyJ…eyJ…`, GCP service account JSON, `-----BEGIN ... PRIVATE KEY-----` blocks.
-- Internal hostnames, internal Slack URLs, `*.usea1.pm.abnml.io`, `*.internal`, anything matching `<company>.zendesk.com` or similar SaaS subdomains that imply an internal account.
+- Internal hostnames, internal Slack URLs, anything under `*.internal` / `*.corp` / `*.lan` / company VPN domains, anything matching `<company>.zendesk.com` or similar SaaS subdomains that imply an internal account.
 - Customer or account names that aren't already public.
 - `password=…`, `Authorization: Bearer …`, OAuth tokens.
 - Personal email addresses other than the user's own (and even then, ask if unsure).
